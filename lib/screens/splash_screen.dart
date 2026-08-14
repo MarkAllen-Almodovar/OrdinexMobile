@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../utils/constants.dart';
 
@@ -42,13 +41,11 @@ class _SplashScreenState extends State<SplashScreen>
     if (user != null) {
       final hasProfile = await _authService.profileExists(user.uid);
       if (!mounted) return;
-      if (hasProfile) {
-        Navigator.of(context).pushReplacementNamed('/home');
-      } else {
-        Navigator.of(context).pushReplacementNamed('/phone');
-      }
+      Navigator.of(context).pushReplacementNamed(
+        hasProfile ? '/home' : '/signup',
+      );
     } else {
-      Navigator.of(context).pushReplacementNamed('/phone');
+      Navigator.of(context).pushReplacementNamed('/login');
     }
   }
 

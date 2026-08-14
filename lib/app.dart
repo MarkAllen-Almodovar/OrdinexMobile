@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'utils/theme.dart';
 import 'screens/splash_screen.dart';
-import 'screens/auth/phone_screen.dart';
-import 'screens/auth/otp_screen.dart';
-import 'screens/auth/register_screen.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/auth/signup_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/reports/my_reports_screen.dart';
 import 'screens/reports/report_form_screen.dart';
@@ -14,9 +13,8 @@ import 'screens/profile/profile_screen.dart';
 /// The app routes, shared between full and framed builds.
 Map<String, WidgetBuilder> get appRoutes => {
   '/': (_) => const SplashScreen(),
-  '/phone': (_) => const PhoneScreen(),
-  '/otp': (_) => const OtpScreen(),
-  '/register': (_) => const RegisterScreen(),
+  '/login': (_) => const LoginScreen(),
+  '/signup': (_) => const SignupScreen(),
   '/home': (_) => const HomeScreen(),
   '/reports': (_) => const MyReportsScreen(),
   '/report-form': (_) => const ReportFormScreen(),

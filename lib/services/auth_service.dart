@@ -6,87 +6,89 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Current Firebase user stream
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  // ── Streams / getters ──────────────────────────────────────────────────────
 
-  // Current user (nullable)
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
 
-  /// Normalise Philippine mobile number to E.164 (+63XXXXXXXXX)
-  String normalisePhone(String raw) {
-    final cleaned = raw.replaceAll(RegExp(r'\D'), '');
-    if (cleaned.startsWith('63') && cleaned.length == 12) {
-      return '+$cleaned';
-    }
-    if (cleaned.startsWith('09') && cleaned.length == 11) {
-      return '+63${cleaned.substring(1)}';
-    }
-    if (cleaned.startsWith('9') && cleaned.length == 10) {
-      return '+63$cleaned';
-    }
-    return '+$cleaned';
-  }
+  // ── Email / Password ───────────────────────────────────────────────────────
 
-  /// Send OTP via Firebase Phone Auth
-  Future<void> sendOTP({
-    required String phoneNumber,
-    required Function(String verificationId, int? resendToken) onCodeSent,
-    required Function(FirebaseAuthException e) onVerificationFailed,
-    required Function(PhoneAuthCredential credential) onAutoVerified,
-    int? resendToken,
+  /// Sign in with email and password.
+  Future<UserCredential> signInWithEmail({
+    required String email,
+    required String password,
   }) async {
-    final e164 = normalisePhone(phoneNumber);
-    await _auth.verifyPhoneNumber(
-      phoneNumber: e164,
-      forceResendingToken: resendToken,
-      verificationCompleted: onAutoVerified,
-      verificationFailed: onVerificationFailed,
-      codeSent: (verificationId, resendToken) {
-        onCodeSent(verificationId, resendToken);
-      },
-      codeAutoRetrievalTimeout: (_) {},
-      timeout: const Duration(seconds: 60),
+    return _auth.signInWithEmailAndPassword(
+      email: email.trim(),
+      password: password,
     );
   }
 
-  /// Verify the 6-digit OTP and sign in
-  Future<UserCredential> verifyOTP({
-    required String verificationId,
-    required String otp,
+  /// Create a new Firebase Auth account with email and password.
+  Future<UserCredential> signUpWithEmail({
+    required String email,
+    required String password,
   }) async {
-    final credential = PhoneAuthProvider.credential(
-      verificationId: verificationId,
-      smsCode: otp,
+    return _auth.createUserWithEmailAndPassword(
+      email: email.trim(),
+      password: password,
     );
-    return _auth.signInWithCredential(credential);
   }
 
-  /// Sign in directly with a PhoneAuthCredential (auto-verify path)
-  Future<UserCredential> signInWithCredential(
-      PhoneAuthCredential credential) async {
-    return _auth.signInWithCredential(credential);
+  /// Send a password-reset email.
+  Future<void> sendPasswordReset(String email) async {
+    await _auth.sendPasswordResetEmail(email: email.trim());
   }
 
-  /// Check whether a Firestore profile exists for [uid]
+  // ── Firestore profile ──────────────────────────────────────────────────────
+
+  /// Returns true if a Firestore profile document exists for [uid].
   Future<bool> profileExists(String uid) async {
     final doc = await _db.collection('users').doc(uid).get();
     return doc.exists;
   }
 
-  /// Fetch user profile from Firestore
+  /// Fetch user profile from Firestore.
   Future<UserModel?> getUserProfile(String uid) async {
     final doc = await _db.collection('users').doc(uid).get();
     if (!doc.exists) return null;
     return UserModel.fromDoc(doc);
   }
 
-  /// Create a new Firestore profile
+  /// Create or overwrite a Firestore profile.
   Future<void> createUserProfile(UserModel user) async {
     await _db.collection('users').doc(user.uid).set(user.toMap());
   }
 
-  /// Sign out
+  // ── Sign out ───────────────────────────────────────────────────────────────
+
   Future<void> signOut() async {
     await _auth.signOut();
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  /// Human-readable message for [FirebaseAuthException].
+  String friendlyError(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'user-not-found':
+        return 'No account found for that email.';
+      case 'wrong-password':
+        return 'Incorrect password. Please try again.';
+      case 'invalid-credential':
+        return 'Invalid email or password.';
+      case 'email-already-in-use':
+        return 'An account already exists for that email.';
+      case 'weak-password':
+        return 'Password is too weak. Use at least 6 characters.';
+      case 'invalid-email':
+        return 'Please enter a valid email address.';
+      case 'too-many-requests':
+        return 'Too many attempts. Please try again later.';
+      case 'network-request-failed':
+        return 'Network error. Check your connection.';
+      default:
+        return e.message ?? 'Something went wrong. Please try again.';
+    }
   }
 }

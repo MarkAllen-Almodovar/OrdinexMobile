@@ -8,6 +8,7 @@ class UserModel {
   final String phoneNumber;
   final String role;
   final DateTime createdAt;
+  final String? idImageUrl;
 
   const UserModel({
     required this.uid,
@@ -17,6 +18,7 @@ class UserModel {
     required this.phoneNumber,
     this.role = 'resident',
     required this.createdAt,
+    this.idImageUrl,
   });
 
   Map<String, dynamic> toMap() => {
@@ -27,6 +29,7 @@ class UserModel {
         'phoneNumber': phoneNumber,
         'role': role,
         'createdAt': Timestamp.fromDate(createdAt),
+        if (idImageUrl != null) 'idImageUrl': idImageUrl,
       };
 
   factory UserModel.fromMap(Map<String, dynamic> map, String uid) => UserModel(
@@ -39,6 +42,7 @@ class UserModel {
         createdAt: map['createdAt'] is Timestamp
             ? (map['createdAt'] as Timestamp).toDate()
             : DateTime.now(),
+        idImageUrl: map['idImageUrl'] as String?,
       );
 
   factory UserModel.fromDoc(DocumentSnapshot doc) =>
@@ -52,6 +56,7 @@ class UserModel {
     String? phoneNumber,
     String? role,
     DateTime? createdAt,
+    String? idImageUrl,
   }) =>
       UserModel(
         uid: uid ?? this.uid,
@@ -61,5 +66,6 @@ class UserModel {
         phoneNumber: phoneNumber ?? this.phoneNumber,
         role: role ?? this.role,
         createdAt: createdAt ?? this.createdAt,
+        idImageUrl: idImageUrl ?? this.idImageUrl,
       );
 }
