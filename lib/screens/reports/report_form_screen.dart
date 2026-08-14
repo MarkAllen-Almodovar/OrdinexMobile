@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
@@ -22,6 +23,8 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
   final _descController = TextEditingController();
   final _locationController = TextEditingController();
   File? _imageFile;
+  XFile? _videoFile;           // video selected by user
+  bool _mediaIsVideo = false;  // whether current media is video
   double? _latitude;
   double? _longitude;
   bool _submitting = false;
@@ -89,7 +92,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 4,
                     ),
                   ],
@@ -177,9 +180,9 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
             padding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: gradientStart.withOpacity(0.08),
+              color: gradientStart.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: gradientStart.withOpacity(0.4)),
+              border: Border.all(color: gradientStart.withValues(alpha: 0.4)),
             ),
             child: Row(
               children: [
@@ -227,12 +230,12 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
         ),
         const SizedBox(height: 16),
 
-        // Photo Evidence
-        const Text('Photo Evidence (Optional)',
+        // Photo / Video Evidence
+        const Text('Evidence (Optional)',
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         GestureDetector(
-          onTap: _showCameraPrivacyDialog,
+          onTap: _showMediaPrivacyDialog,
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -243,13 +246,13 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                   color: Colors.grey.shade300,
                   style: BorderStyle.solid),
             ),
-            child: _imageFile == null
+            child: _imageFile == null && _videoFile == null
                 ? const Column(
                     children: [
                       Icon(Icons.camera_alt_outlined,
                           size: 32, color: Colors.grey),
                       SizedBox(height: 6),
-                      Text('Take Photo with Camera',
+                      Text('Take Photo or Record Video',
                           style: TextStyle(
                               color: Colors.grey,
                               fontWeight: FontWeight.w500)),
@@ -261,18 +264,64 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                   )
                 : Stack(
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.file(_imageFile!,
-                            height: 160,
-                            width: double.infinity,
-                            fit: BoxFit.cover),
-                      ),
+                      // Preview
+                      if (!_mediaIsVideo && _imageFile != null)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: kIsWeb
+                              ? Image.network(
+                                  _imageFile!.path,
+                                  height: 160,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                )
+                              : Image.file(
+                                  _imageFile!,
+                                  height: 160,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                ),
+                        ),
+                      if (_mediaIsVideo && _videoFile != null)
+                        Container(
+                          height: 160,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.black87,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.videocam,
+                                  color: Colors.white, size: 40),
+                              const SizedBox(height: 8),
+                              Text(
+                                _videoFile!.name,
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 12),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              const Text('Video recorded ✓',
+                                  style: TextStyle(
+                                      color: Colors.greenAccent,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      // Remove button
                       Positioned(
                         top: 6,
                         right: 6,
                         child: GestureDetector(
-                          onTap: () => setState(() => _imageFile = null),
+                          onTap: () => setState(() {
+                            _imageFile = null;
+                            _videoFile = null;
+                            _mediaIsVideo = false;
+                          }),
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: const BoxDecoration(
@@ -395,7 +444,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
     );
   }
 
-  Future<void> _showCameraPrivacyDialog() async {
+  Future<void> _showMediaPrivacyDialog() async {
     final allowed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -403,10 +452,10 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('📷 Camera Access Notice'),
         content: const Text(
-          'BEE-Alert will use your camera to capture photo evidence. '
-          'Photos will include timestamp and location data. '
+          'BEE-Alert will use your camera to capture photo or video evidence. '
+          'Media will include timestamp and location data. '
           'This information will be shared with Bacnotan LGU officials. '
-          'By proceeding, you consent to photo capture.',
+          'By proceeding, you consent to media capture.',
           style: TextStyle(fontSize: 14),
         ),
         actions: [
@@ -419,20 +468,152 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
                 backgroundColor: gradientStart),
-            child: const Text('Allow & Take Photo'),
+            child: const Text('Allow & Continue'),
           ),
         ],
       ),
     );
 
-    if (allowed == true) {
+    if (allowed != true) return;
+
+    // Show photo vs video picker
+    if (!mounted) return;
+    final mediaType = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40, height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              ListTile(
+                leading: Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    color: gradientStart.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.camera_alt_outlined,
+                      color: gradientStart),
+                ),
+                title: const Text('Take Photo',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Capture a photo as evidence'),
+                onTap: () => Navigator.pop(context, 'photo'),
+              ),
+              ListTile(
+                leading: Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    color: gradientStart.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.videocam_outlined,
+                      color: gradientStart),
+                ),
+                title: const Text('Record Video',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Record a short video as evidence'),
+                onTap: () => Navigator.pop(context, 'video'),
+              ),
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              ListTile(
+                leading: Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.photo_library_outlined,
+                      color: Colors.purple),
+                ),
+                title: const Text('Upload Photo from Gallery',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Choose an existing photo'),
+                onTap: () => Navigator.pop(context, 'gallery_photo'),
+              ),
+              ListTile(
+                leading: Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.video_library_outlined,
+                      color: Colors.purple),
+                ),
+                title: const Text('Upload Video from Gallery',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Choose an existing video'),
+                onTap: () => Navigator.pop(context, 'gallery_video'),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (mediaType == 'photo') {
       final picked = await _picker.pickImage(
         source: ImageSource.camera,
         imageQuality: 75,
         maxWidth: 1280,
       );
-      if (picked != null) {
-        setState(() => _imageFile = File(picked.path));
+      if (picked != null && mounted) {
+        setState(() {
+          _imageFile = File(picked.path);
+          _videoFile = null;
+          _mediaIsVideo = false;
+        });
+      }
+    } else if (mediaType == 'video') {
+      final picked = await _picker.pickVideo(
+        source: ImageSource.camera,
+        maxDuration: const Duration(minutes: 2),
+      );
+      if (picked != null && mounted) {
+        setState(() {
+          _videoFile = picked;
+          _imageFile = null;
+          _mediaIsVideo = true;
+        });
+      }
+    } else if (mediaType == 'gallery_photo') {
+      final picked = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 75,
+        maxWidth: 1280,
+      );
+      if (picked != null && mounted) {
+        setState(() {
+          _imageFile = File(picked.path);
+          _videoFile = null;
+          _mediaIsVideo = false;
+        });
+      }
+    } else if (mediaType == 'gallery_video') {
+      final picked = await _picker.pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: const Duration(minutes: 5),
+      );
+      if (picked != null && mounted) {
+        setState(() {
+          _videoFile = picked;
+          _imageFile = null;
+          _mediaIsVideo = true;
+        });
       }
     }
   }
@@ -498,7 +679,11 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
         reportReference: ref,
       );
 
-      await _reportService.submitReport(report, imageFile: _imageFile);
+      await _reportService.submitReport(report,
+          imageFile: _mediaIsVideo ? null : _imageFile,
+          videoFile: _mediaIsVideo && _videoFile != null
+              ? File(_videoFile!.path)
+              : null);
 
       if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(

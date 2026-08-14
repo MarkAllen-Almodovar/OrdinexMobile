@@ -29,15 +29,36 @@ class ReportService {
     }
   }
 
-  /// Submit a report — uploads image if present, then saves to Firestore
-  Future<String> submitReport(ReportModel report, {File? imageFile}) async {
+  /// Upload video to Firebase Storage and return download URL
+  Future<String?> _uploadVideo(File videoFile, String reportRef) async {
+    try {
+      final ref = _storage.ref().child('reports/${reportRef}_video.mp4');
+      final task = await ref.putFile(
+        videoFile,
+        SettableMetadata(contentType: 'video/mp4'),
+      );
+      return await task.ref.getDownloadURL();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Submit a report — uploads image or video if present, then saves to Firestore
+  Future<String> submitReport(ReportModel report,
+      {File? imageFile, File? videoFile}) async {
     String? imageUrl;
+    String? videoUrl;
+
     if (imageFile != null) {
       imageUrl = await _uploadImage(imageFile, report.reportReference);
+    }
+    if (videoFile != null) {
+      videoUrl = await _uploadVideo(videoFile, report.reportReference);
     }
 
     final data = report.toMap();
     if (imageUrl != null) data['imageUrl'] = imageUrl;
+    if (videoUrl != null) data['videoUrl'] = videoUrl;
 
     final docRef = await _db.collection('reports').add(data);
     return docRef.id;

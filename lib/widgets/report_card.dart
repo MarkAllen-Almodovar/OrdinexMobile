@@ -80,7 +80,7 @@ class ReportCard extends StatelessWidget {
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: gradientStart.withOpacity(0.1),
+                      color: gradientStart.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(

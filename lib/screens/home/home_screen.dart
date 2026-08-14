@@ -30,8 +30,6 @@ class _HomeScreenState extends State<HomeScreen> {
   UserModel? _userProfile;
   bool _profileLoading = true;
 
-  final List<Widget> _tabs = const [];
-
   @override
   void initState() {
     super.initState();
@@ -42,10 +40,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final profile = await _authService.getUserProfile(user.uid);
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _userProfile = profile;
         _profileLoading = false;
       });
+      }
     } else {
       setState(() => _profileLoading = false);
     }
@@ -257,7 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -274,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: gradientStart.withOpacity(0.1),
+                        color: gradientStart.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Icon(Icons.business_outlined,
@@ -353,8 +353,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Column(
-                    children: const [
+                  child: const Column(
+                    children: [
                       Icon(Icons.assignment_outlined,
                           size: 48, color: Colors.grey),
                       SizedBox(height: 12),

@@ -92,12 +92,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 bottomRight: Radius.circular(32),
               ),
             ),
-            child: SafeArea(
+            child: const SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                padding: EdgeInsets.fromLTRB(24, 16, 24, 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
                       '🐝  BEE-Alert',
                       style: TextStyle(
@@ -160,7 +160,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     // Barangay dropdown
                     DropdownButtonFormField<String>(
-                      value: _selectedBarangay,
+                      initialValue: _selectedBarangay,
                       hint: const Text('Select Barangay'),
                       isExpanded: true,
                       validator: (v) =>

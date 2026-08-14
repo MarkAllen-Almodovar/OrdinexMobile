@@ -35,17 +35,12 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final credential = await _authService.signInWithEmail(
+      await _authService.signInWithEmail(
         email: _emailController.text,
         password: _passwordController.text,
       );
       if (!mounted) return;
-      final hasProfile =
-          await _authService.profileExists(credential.user!.uid);
-      if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(
-        hasProfile ? '/home' : '/signup',
-      );
+      Navigator.of(context).pushReplacementNamed('/home');
     } on FirebaseAuthException catch (e) {
       setState(() {
         _loading = false;
@@ -93,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 24,
                   offset: const Offset(0, 8),
                 ),
@@ -118,8 +113,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       topRight: Radius.circular(20),
                     ),
                   ),
-                  child: Column(
-                    children: const [
+                  child: const Column(
+                    children: [
                       Text('🐝', style: TextStyle(fontSize: 44)),
                       SizedBox(height: 12),
                       Text(

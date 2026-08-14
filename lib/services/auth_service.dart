@@ -60,6 +60,11 @@ class AuthService {
     await _db.collection('users').doc(user.uid).set(user.toMap());
   }
 
+  /// Update specific fields on an existing Firestore profile.
+  Future<void> updateUserProfile(String uid, Map<String, dynamic> fields) async {
+    await _db.collection('users').doc(uid).update(fields);
+  }
+
   // ── Sign out ───────────────────────────────────────────────────────────────
 
   Future<void> signOut() async {

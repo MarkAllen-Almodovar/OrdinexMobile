@@ -59,7 +59,7 @@ class _MobileFrame extends StatelessWidget {
         borderRadius: BorderRadius.circular(40),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.6),
+            color: Colors.black.withValues(alpha: 0.6),
             blurRadius: 50,
             spreadRadius: 5,
           ),
