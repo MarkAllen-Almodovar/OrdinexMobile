@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
@@ -47,8 +48,9 @@ class _SignupScreenState extends State<SignupScreen> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
       source: source,
-      imageQuality: 80,
-      maxWidth: 1200,
+      imageQuality: 50,
+      maxWidth: 800,
+      maxHeight: 800,
     );
     if (picked != null) {
       setState(() => _idImage = picked);
@@ -120,10 +122,13 @@ class _SignupScreenState extends State<SignupScreen> {
         .child('$uid.jpg');
     if (kIsWeb) {
       final bytes = await _idImage!.readAsBytes();
-      await ref.putData(bytes,
-          SettableMetadata(contentType: 'image/jpeg'));
+      await ref
+          .putData(bytes, SettableMetadata(contentType: 'image/jpeg'))
+          .timeout(const Duration(seconds: 30));
     } else {
-      await ref.putFile(File(_idImage!.path));
+      await ref
+          .putFile(File(_idImage!.path))
+          .timeout(const Duration(seconds: 30));
     }
     return await ref.getDownloadURL();
   }
@@ -137,29 +142,47 @@ class _SignupScreenState extends State<SignupScreen> {
 
     try {
       // 1. Create Firebase Auth account
-      final credential = await _authService.signUpWithEmail(
-        email: _emailController.text,
-        password: _passwordController.text,
-      );
+      final credential = await _authService
+          .signUpWithEmail(
+            email: _emailController.text,
+            password: _passwordController.text,
+          )
+          .timeout(const Duration(seconds: 15));
 
-      // 2. Upload ID image if provided
-      final idUrl = await _uploadIdImage(credential.user!.uid);
+      final uid = credential.user!.uid;
 
-      // 3. Save profile to Firestore
+      // 2. Save profile immediately (no image yet — fast path)
       final profile = UserModel(
-        uid: credential.user!.uid,
+        uid: uid,
         fullName: _nameController.text.trim(),
         barangay: _selectedBarangay!,
         address: _addressController.text.trim(),
         phoneNumber: _phoneController.text.trim(),
         role: 'resident',
         createdAt: DateTime.now(),
-        idImageUrl: idUrl,
+        idImageUrl: null,
       );
-      await _authService.createUserProfile(profile);
+      await _authService
+          .createUserProfile(profile)
+          .timeout(const Duration(seconds: 15));
 
       if (!mounted) return;
+      // Navigate immediately — don't wait for image upload
       Navigator.of(context).pushReplacementNamed('/home');
+
+      // 3. Upload ID image in the background after navigation
+      if (_idImage != null) {
+        _uploadIdImage(uid).then((url) {
+          if (url != null) {
+            FirebaseFirestore.instance
+                .collection('users')
+                .doc(uid)
+                .update({'idImageUrl': url});
+          }
+        }).catchError((_) {
+          // Silent fail — image can be re-uploaded from profile later
+        });
+      }
     } on FirebaseAuthException catch (e) {
       setState(() {
         _loading = false;
@@ -187,7 +210,7 @@ class _SignupScreenState extends State<SignupScreen> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 24,
                   offset: const Offset(0, 8),
                 ),
@@ -212,8 +235,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       topRight: Radius.circular(20),
                     ),
                   ),
-                  child: Column(
-                    children: const [
+                  child: const Column(
+                    children: [
                       Text('🐝', style: TextStyle(fontSize: 40)),
                       SizedBox(height: 10),
                       Text(
@@ -345,9 +368,13 @@ class _SignupScreenState extends State<SignupScreen> {
                             final digits =
                                 v.replaceAll(RegExp(r'\D'), '');
                             if (digits.length == 11 &&
-                                digits.startsWith('09')) return null;
+                                digits.startsWith('09')) {
+                              return null;
+                            }
                             if (digits.length == 10 &&
-                                digits.startsWith('9')) return null;
+                                digits.startsWith('9')) {
+                              return null;
+                            }
                             return 'Enter a valid PH number (09XXXXXXXXX)';
                           },
                           decoration: _inputDecoration(

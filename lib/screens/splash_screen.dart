@@ -34,16 +34,14 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigate() async {
-    await Future.delayed(const Duration(milliseconds: 2000));
+    // Wait just enough for the animation to finish
+    await Future.delayed(const Duration(milliseconds: 1200));
     if (!mounted) return;
 
     final user = _authService.currentUser;
     if (user != null) {
-      final hasProfile = await _authService.profileExists(user.uid);
-      if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(
-        hasProfile ? '/home' : '/signup',
-      );
+      // User already logged in — go straight to home
+      Navigator.of(context).pushReplacementNamed('/home');
     } else {
       Navigator.of(context).pushReplacementNamed('/login');
     }
@@ -80,7 +78,7 @@ class _SplashScreenState extends State<SplashScreen>
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Center(
@@ -116,7 +114,7 @@ class _SplashScreenState extends State<SplashScreen>
                   child: CircularProgressIndicator(
                     strokeWidth: 3,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.white.withOpacity(0.8)),
+                        Colors.white.withValues(alpha: 0.8)),
                   ),
                 ),
               ],

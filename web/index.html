@@ -41,6 +41,21 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <!-- Firebase JS SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyDbBQldkk__4-bQYby9pbVxGQpeECkBae4",
+      authDomain: "ordinex-5cfa3.firebaseapp.com",
+      projectId: "ordinex-5cfa3",
+      storageBucket: "ordinex-5cfa3.firebasestorage.app",
+      messagingSenderId: "69817565903",
+      appId: "1:69817565903:web:463866d785caf9b48b2dba",
+      measurementId: "G-P0MFME39ES"
+    };
+    window.firebaseConfig = firebaseConfig;
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
