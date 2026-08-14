@@ -49,10 +49,18 @@ class ProfileScreen extends StatelessWidget {
     );
 
     if (confirmed == true) {
-      await AuthService().signOut();
-      if (context.mounted) {
-        Navigator.of(context)
-            .pushNamedAndRemoveUntil('/phone', (r) => false);
+      try {
+        await AuthService().signOut();
+        if (context.mounted) {
+          Navigator.of(context)
+              .pushNamedAndRemoveUntil('/login', (r) => false);
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Sign out failed. Please try again.')),
+          );
+        }
       }
     }
   }
