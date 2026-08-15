@@ -34,16 +34,26 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigate() async {
-    // Wait just enough for the animation to finish
     await Future.delayed(const Duration(milliseconds: 1200));
     if (!mounted) return;
 
     final user = _authService.currentUser;
-    if (user != null) {
-      // User already logged in — go straight to home
-      Navigator.of(context).pushReplacementNamed('/home');
-    } else {
+    if (user == null) {
       Navigator.of(context).pushReplacementNamed('/login');
+      return;
+    }
+
+    // Check approval status before granting home access
+    final profile = await _authService.getUserProfile(user.uid);
+    if (!mounted) return;
+
+    final status = profile?.status ?? 'pending';
+    if (status == 'approved') {
+      Navigator.of(context).pushReplacementNamed('/home');
+    } else if (status == 'rejected') {
+      Navigator.of(context).pushReplacementNamed('/rejected');
+    } else {
+      Navigator.of(context).pushReplacementNamed('/pending');
     }
   }
 
@@ -73,7 +83,6 @@ class _SplashScreenState extends State<SplashScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Bee emoji in a white circle
                 Container(
                   width: 100,
                   height: 100,

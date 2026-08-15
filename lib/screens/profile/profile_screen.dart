@@ -436,6 +436,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
       final updated = (widget.profile ?? UserModel(
         uid: uid,
         fullName: '',
+        email: '',
         barangay: '',
         address: '',
         phoneNumber: '',
