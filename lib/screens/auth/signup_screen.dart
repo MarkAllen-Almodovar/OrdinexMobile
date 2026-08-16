@@ -1,11 +1,11 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
+import '../../services/cloudinary_service.dart';
 import '../../utils/constants.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -30,6 +30,7 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   bool _idImageTouched = false;
+  String? _selectedBarangay;
   String? _errorMsg;
 
   @override
@@ -123,21 +124,11 @@ class _SignupScreenState extends State<SignupScreen> {
 
   Future<String?> _uploadIdImage(String uid) async {
     if (_idImage == null) return null;
-    try {
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('user_ids')
-          .child('$uid.jpg');
-
-      final bytes = await _idImage!.readAsBytes();
-      await ref.putData(
-        bytes,
-        SettableMetadata(contentType: 'image/jpeg'),
-      );
-      return await ref.getDownloadURL();
-    } catch (_) {
-      return null;
-    }
+    return CloudinaryService.uploadFile(
+      _idImage!,
+      folder: 'user_ids',
+      resourceType: 'image',
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -174,7 +165,7 @@ class _SignupScreenState extends State<SignupScreen> {
       // 2. Save profile immediately so the resident appears in the admin tab.
       //    On native, we upload the image first and include the URL.
       //    On web, Firebase Storage has CORS issues so we save without the URL
-      //    and upload in the background — the admin card updates automatically
+      //    and upload in the background â€” the admin card updates automatically
       //    via the Firestore real-time listener when idImageUrl is written.
       String? idUrl;
       if (!kIsWeb) {
@@ -185,7 +176,7 @@ class _SignupScreenState extends State<SignupScreen> {
         uid: uid,
         fullName: _nameController.text.trim(),
         email: _emailController.text.trim(),
-        barangay: _addressController.text.trim(),
+        barangay: _selectedBarangay ?? _addressController.text.trim(),
         address: _addressController.text.trim(),
         phoneNumber: _phoneController.text.trim(),
         role: 'resident',
@@ -266,7 +257,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                   child: const Column(
                     children: [
-                      Text('🐝', style: TextStyle(fontSize: 40)),
+                      Text('ðŸ', style: TextStyle(fontSize: 40)),
                       SizedBox(height: 10),
                       Text(
                         appName,
@@ -409,6 +400,73 @@ class _SignupScreenState extends State<SignupScreen> {
 
                         const SizedBox(height: 16),
 
+                        // Barangay
+                        _label('Barangay'),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          initialValue: _selectedBarangay,
+                          isExpanded: true,
+                          hint: const Text(
+                            'Select your barangay',
+                            style: TextStyle(
+                                color: Color(0xFF9CA3AF), fontSize: 14),
+                          ),
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(
+                              Icons.location_city_outlined,
+                              size: 20,
+                              color: Color(0xFF9CA3AF),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide:
+                                  BorderSide(color: Colors.grey[300]!),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide:
+                                  BorderSide(color: Colors.grey[300]!),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                  color: gradientStart, width: 2),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide:
+                                  const BorderSide(color: Colors.red),
+                            ),
+                            focusedErrorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                  color: Colors.red, width: 2),
+                            ),
+                          ),
+                          validator: (v) => v == null
+                              ? 'Please select your barangay'
+                              : null,
+                          items: bacnotanBarangays
+                              .map((b) => DropdownMenuItem(
+                                    value: b,
+                                    child: Text(
+                                      b,
+                                      style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Color(0xFF1F2937)),
+                                    ),
+                                  ))
+                              .toList(),
+                          onChanged: (val) =>
+                              setState(() => _selectedBarangay = val),
+                        ),
+
+                        const SizedBox(height: 16),
+
                         // Full Address
                         _label('Full Address'),
                         const SizedBox(height: 8),
@@ -420,7 +478,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               ? 'Address is required'
                               : null,
                           decoration: _inputDecoration(
-                            hint: 'House No., Street, Barangay, Municipality',
+                            hint: 'House No., Street',
                             icon: Icons.home_outlined,
                           ),
                         ),
@@ -699,7 +757,7 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
         const SizedBox(height: 4),
         const Text(
-          'Required  •  Camera or Gallery  •  JPG, PNG',
+          'Required  â€¢  Camera or Gallery  â€¢  JPG, PNG',
           style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
         ),
       ],

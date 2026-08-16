@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/report_model.dart';
 import '../../services/report_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/report_card.dart';
+import 'report_detail_screen.dart';
 
 class MyReportsScreen extends StatefulWidget {
   final bool embedded;
@@ -49,67 +50,84 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
     return list;
   }
 
-  String _filterLabel(String f) {
-    if (f == statusOngoing) return 'InProgress';
-    if (f == statusCompleted) return 'Resolved';
-    return f;
-  }
-
   @override
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     final body = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Gradient Header ───────────────────────────────
-        Container(
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [gradientStart, gradientEnd],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        if (!widget.embedded)
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [gradientStart, gradientEnd],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(32),
+                bottomRight: Radius.circular(32),
+              ),
             ),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(28),
-              bottomRight: Radius.circular(28),
-            ),
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!widget.embedded)
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: const Icon(Icons.arrow_back_ios_new,
-                          color: Colors.white, size: 20),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.arrow_back_ios_new,
+                          color: Colors.white),
+                      padding: EdgeInsets.zero,
                     ),
-                  if (!widget.embedded) const SizedBox(height: 8),
-                  const Text(
-                    'My Reports',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Track the status of your submitted reports.',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    const Text('My Reports',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold)),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
 
-        // ── Search bar ────────────────────────────────────
+        // Orange label when embedded
+        if (widget.embedded)
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [gradientStart, gradientEnd],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(32),
+                bottomRight: Radius.circular(32),
+              ),
+            ),
+            child: const SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20, 16, 20, 28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('My Reports',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold)),
+                    SizedBox(height: 4),
+                    Text(municipality,
+                        style:
+                            TextStyle(color: Colors.white70, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+        // Search bar
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           child: TextField(
@@ -117,14 +135,10 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
             onChanged: (v) => setState(() => _searchQuery = v),
             decoration: InputDecoration(
               hintText: 'Search reports...',
-              hintStyle:
-                  const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
-              prefixIcon: const Icon(Icons.search,
-                  color: Color(0xFF9CA3AF), size: 20),
+              prefixIcon: const Icon(Icons.search),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear,
-                          color: Color(0xFF9CA3AF), size: 18),
+                      icon: const Icon(Icons.clear),
                       onPressed: () {
                         _searchController.clear();
                         setState(() => _searchQuery = '');
@@ -133,8 +147,6 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                   : null,
               filled: true,
               fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -143,148 +155,98 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
           ),
         ),
 
-        // ── Report list with count tabs ───────────────────
+        // Filter tabs
+        Padding(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _filters.map((f) {
+                final active = _filterStatus == f;
+                return GestureDetector(
+                  onTap: () => setState(() => _filterStatus = f),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color:
+                          active ? gradientStart : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: active
+                            ? gradientStart
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    child: Text(
+                      f,
+                      style: TextStyle(
+                        color: active ? Colors.white : Colors.grey,
+                        fontWeight: active
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+
+        // Report list
         Expanded(
           child: StreamBuilder<List<ReportModel>>(
             stream: _reportService.getUserReports(uid),
             builder: (ctx, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
                 return const Center(
-                    child: CircularProgressIndicator(color: gradientStart));
+                    child:
+                        CircularProgressIndicator(color: gradientStart));
               }
-              final all = snap.data ?? [];
-
-              // Count per filter
-              Map<String, int> counts = {
-                'All': all.length,
-                statusPending: all
-                    .where((r) => r.status == statusPending)
-                    .length,
-                statusOngoing: all
-                    .where((r) => r.status == statusOngoing)
-                    .length,
-                statusCompleted: all
-                    .where((r) => r.status == statusCompleted)
-                    .length,
-              };
-
-              final filtered = _applyFilter(all);
-
-              return Column(
-                children: [
-                  // Filter tabs with counts
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: _filters.map((f) {
-                          final active = _filterStatus == f;
-                          final count = counts[f] ?? 0;
-                          return GestureDetector(
-                            onTap: () =>
-                                setState(() => _filterStatus = f),
-                            child: Container(
-                              margin: const EdgeInsets.only(right: 8),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: active
-                                    ? gradientStart
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: active
-                                      ? gradientStart
-                                      : Colors.grey.shade300,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    _filterLabel(f),
-                                    style: TextStyle(
-                                      color: active
-                                          ? Colors.white
-                                          : const Color(0xFF6B7280),
-                                      fontWeight: active
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  if (count > 0 && f != 'All') ...[
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 6, vertical: 1),
-                                      decoration: BoxDecoration(
-                                        color: active
-                                            ? Colors.white
-                                                .withValues(alpha: 0.3)
-                                            : gradientStart
-                                                .withValues(alpha: 0.15),
-                                        borderRadius:
-                                            BorderRadius.circular(10),
-                                      ),
-                                      child: Text(
-                                        '$count',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: active
-                                              ? Colors.white
-                                              : gradientStart,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList(),
+              final filtered = _applyFilter(snap.data ?? []);
+              if (filtered.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.assignment_outlined,
+                          size: 56, color: Colors.grey),
+                      const SizedBox(height: 12),
+                      Text(
+                        _filterStatus == 'All'
+                            ? 'No reports yet'
+                            : 'No $_filterStatus reports',
+                        style: const TextStyle(
+                            fontSize: 16, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_filterStatus == 'All')
+                        const Text(
+                          'Submit your first concern report',
+                          style: TextStyle(
+                              fontSize: 13, color: Colors.grey),
+                        ),
+                    ],
+                  ),
+                );
+              }
+              return ListView.builder(
+                padding: const EdgeInsets.only(bottom: 80),
+                itemCount: filtered.length,
+                itemBuilder: (ctx, i) => ReportCard(
+                  report: filtered[i],
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ReportDetailScreen(
+                        report: filtered[i],
                       ),
                     ),
                   ),
-
-                  // Report list
-                  Expanded(
-                    child: filtered.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.assignment_outlined,
-                                    size: 56, color: Colors.grey),
-                                const SizedBox(height: 12),
-                                Text(
-                                  _filterStatus == 'All'
-                                      ? 'No reports yet'
-                                      : 'No ${_filterLabel(_filterStatus)} reports',
-                                  style: const TextStyle(
-                                      fontSize: 16, color: Colors.grey),
-                                ),
-                                const SizedBox(height: 8),
-                                if (_filterStatus == 'All')
-                                  const Text(
-                                    'Submit your first concern report',
-                                    style: TextStyle(
-                                        fontSize: 13, color: Colors.grey),
-                                  ),
-                              ],
-                            ),
-                          )
-                        : ListView.builder(
-                            padding:
-                                const EdgeInsets.only(bottom: 80),
-                            itemCount: filtered.length,
-                            itemBuilder: (ctx, i) =>
-                                ReportCard(report: filtered[i]),
-                          ),
-                  ),
-                ],
+                ),
               );
             },
           ),
@@ -292,7 +254,9 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
       ],
     );
 
-    if (widget.embedded) return body;
+    if (widget.embedded) {
+      return body;
+    }
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: body,

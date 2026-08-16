@@ -1,12 +1,11 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/report_model.dart';
+import 'cloudinary_service.dart';
 
 class ReportService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   /// Generate a unique report reference: RPT-{timestamp}-{3-digit random}
   String generateReportReference() {
@@ -15,32 +14,8 @@ class ReportService {
     return 'RPT-$ts-$rand';
   }
 
-  /// Upload image to Firebase Storage using bytes (works on web + native)
-  Future<String?> _uploadImage(XFile imageFile, String reportRef) async {
-    try {
-      final ref = _storage.ref().child('reports/$reportRef.jpg');
-      final bytes = await imageFile.readAsBytes();
-      await ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
-      return await ref.getDownloadURL();
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// Upload video to Firebase Storage using bytes (works on web + native)
-  Future<String?> _uploadVideo(XFile videoFile, String reportRef) async {
-    try {
-      final ref =
-          _storage.ref().child('reports/${reportRef}_video.mp4');
-      final bytes = await videoFile.readAsBytes();
-      await ref.putData(bytes, SettableMetadata(contentType: 'video/mp4'));
-      return await ref.getDownloadURL();
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// Submit a report — uploads image or video if present, then saves to Firestore
+  /// Submit a report — uploads image/video to Cloudinary then saves to Firestore.
+  /// Cloudinary handles web and native without CORS issues.
   Future<String> submitReport(
     ReportModel report, {
     XFile? imageFile,
@@ -50,10 +25,19 @@ class ReportService {
     String? videoUrl;
 
     if (imageFile != null) {
-      imageUrl = await _uploadImage(imageFile, report.reportReference);
+      imageUrl = await CloudinaryService.uploadFile(
+        imageFile,
+        folder: 'reports',
+        resourceType: 'image',
+      );
     }
+
     if (videoFile != null) {
-      videoUrl = await _uploadVideo(videoFile, report.reportReference);
+      videoUrl = await CloudinaryService.uploadFile(
+        videoFile,
+        folder: 'reports',
+        resourceType: 'video',
+      );
     }
 
     final data = report.toMap();
@@ -85,5 +69,20 @@ class ReportService {
         .snapshots()
         .map((snap) =>
             snap.docs.map((doc) => ReportModel.fromDoc(doc)).toList());
+  }
+
+  /// Cancel a report — only allowed when status is still Pending.
+  /// Stores the cancellation reason and marks status as 'Cancelled'.
+  Future<void> cancelReport(String reportId, String reason) async {
+    await _db.collection('reports').doc(reportId).update({
+      'status': 'Cancelled',
+      'cancellationReason': reason.trim(),
+      'updatedAt': Timestamp.fromDate(DateTime.now()),
+    });
+  }
+
+  /// Hard-delete a report document (admin only).
+  Future<void> deleteReport(String reportId) async {
+    await _db.collection('reports').doc(reportId).delete();
   }
 }

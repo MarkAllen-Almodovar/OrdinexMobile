@@ -9,6 +9,7 @@ import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/report_service.dart';
 import '../../utils/constants.dart';
+
 class ReportFormScreen extends StatefulWidget {
   const ReportFormScreen({super.key});
 
@@ -19,17 +20,20 @@ class ReportFormScreen extends StatefulWidget {
 class _ReportFormScreenState extends State<ReportFormScreen> {
   int _step = 1;
   String? _selectedCategory;
-  final _descController = TextEditingController();
+  final _descController     = TextEditingController();
   final _locationController = TextEditingController();
+
   XFile? _imageFile;
+  XFile? _videoFile;
+
   double? _latitude;
   double? _longitude;
   bool _submitting = false;
   UserModel? _userProfile;
 
-  final AuthService _authService = AuthService();
-  final ReportService _reportService = ReportService();
-  final ImagePicker _picker = ImagePicker();
+  final AuthService    _authService    = AuthService();
+  final ReportService  _reportService  = ReportService();
+  final ImagePicker    _picker         = ImagePicker();
 
   @override
   void initState() {
@@ -52,7 +56,10 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
     super.dispose();
   }
 
-  // â”€â”€ Step 1: category selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ---------------------------------------------------------------------------
+  // Step 1 — category selection
+  // ---------------------------------------------------------------------------
+
   Widget _buildStep1() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -79,12 +86,11 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 20, vertical: 14),
                 decoration: BoxDecoration(
-                  color: selected
-                      ? gradientStart
-                      : Colors.white,
+                  color: selected ? gradientStart : Colors.white,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: selected ? gradientStart : Colors.grey.shade300,
+                    color:
+                        selected ? gradientStart : Colors.grey.shade300,
                     width: selected ? 2 : 1,
                   ),
                   boxShadow: [
@@ -104,8 +110,9 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                     Text(
                       cat,
                       style: TextStyle(
-                        color:
-                            selected ? Colors.white : const Color(0xFF1F2937),
+                        color: selected
+                            ? Colors.white
+                            : const Color(0xFF1F2937),
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
                       ),
@@ -135,8 +142,13 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
     }
   }
 
-  // â”€â”€ Step 2: Report details â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ---------------------------------------------------------------------------
+  // Step 2 — report details
+  // ---------------------------------------------------------------------------
+
   Widget _buildStep2() {
+    final hasMedia = _imageFile != null || _videoFile != null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -151,11 +163,13 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
           child: const Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('âš ï¸', style: TextStyle(fontSize: 18)),
+              Text('⚠️', style: TextStyle(fontSize: 18)),
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'IMPORTANT NOTICE: This platform is NOT for emergency incidents or life-threatening situations. For emergencies, please call 911 or your local emergency hotline immediately.',
+                  'IMPORTANT NOTICE: This platform is NOT for emergency '
+                  'incidents or life-threatening situations. For emergencies, '
+                  'please call 911 or your local emergency hotline immediately.',
                   style: TextStyle(
                       fontSize: 12,
                       color: Colors.red,
@@ -167,19 +181,21 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
         ),
         const SizedBox(height: 20),
 
-        // Category (tappable to change)
+        // Category (tap to change)
         const Text('Concern Category',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            style: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         GestureDetector(
           onTap: () => setState(() => _step = 1),
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: gradientStart.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: gradientStart.withValues(alpha: 0.4)),
+              border: Border.all(
+                  color: gradientStart.withValues(alpha: 0.4)),
             ),
             child: Row(
               children: [
@@ -202,7 +218,8 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
 
         // Description
         const Text('Description',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            style: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         TextField(
           controller: _descController,
@@ -221,78 +238,56 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: gradientStart, width: 2),
+              borderSide:
+                  const BorderSide(color: gradientStart, width: 2),
             ),
           ),
         ),
         const SizedBox(height: 16),
 
-        // Photo Evidence
-        const Text('Photo Evidence (Optional)',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 6),
-        GestureDetector(
-          onTap: _showCameraPrivacyDialog,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: Colors.grey.shade300,
-                  style: BorderStyle.solid),
-            ),
-            child: _imageFile == null
-                ? const Column(
-                    children: [
-                      Icon(Icons.camera_alt_outlined,
-                          size: 32, color: Colors.grey),
-                      SizedBox(height: 6),
-                      Text('Take Photo with Camera',
-                          style: TextStyle(
-                              color: Colors.grey,
-                              fontWeight: FontWeight.w500)),
-                      SizedBox(height: 4),
-                      Text('Auto-capture location & time',
-                          style:
-                              TextStyle(color: Colors.grey, fontSize: 11)),
-                    ],
-                  )
-                : Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: kIsWeb ? Image.network(_imageFile!.path, fit: BoxFit.cover, height: 160, width: double.infinity,) : Image.file(File(_imageFile!.path),
-                            height: 160,
-                            width: double.infinity,
-                            fit: BoxFit.cover),
-                      ),
-                      Positioned(
-                        top: 6,
-                        right: 6,
-                        child: GestureDetector(
-                          onTap: () => setState(() => _imageFile = null),
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.close,
-                                color: Colors.white, size: 16),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
+        // ── Evidence section ────────────────────────────────────────
+        const Text('Evidence (Optional)',
+            style: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        const Text(
+          'Attach a photo or video to support your report.',
+          style: TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
         ),
+        const SizedBox(height: 10),
+
+        if (!hasMedia) ...[
+          // Show both pick buttons when nothing is selected
+          Row(
+            children: [
+              Expanded(
+                child: _evidenceButton(
+                  icon: Icons.photo_camera_outlined,
+                  label: 'Photo',
+                  onTap: _pickPhoto,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _evidenceButton(
+                  icon: Icons.videocam_outlined,
+                  label: 'Video',
+                  onTap: _pickVideo,
+                ),
+              ),
+            ],
+          ),
+        ] else ...[
+          // Preview of selected media
+          _mediaPreview(),
+        ],
+
         const SizedBox(height: 16),
 
         // Location
         const Text('Location',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            style: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         TextField(
           controller: _locationController,
@@ -311,14 +306,16 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: gradientStart, width: 2),
+              borderSide:
+                  const BorderSide(color: gradientStart, width: 2),
             ),
           ),
         ),
         const SizedBox(height: 8),
         TextButton.icon(
           onPressed: _useGpsLocation,
-          icon: const Text('ðŸ“', style: TextStyle(fontSize: 16)),
+          icon: const Icon(Icons.my_location,
+              size: 16, color: gradientStart),
           label: const Text('Use my current GPS location',
               style: TextStyle(color: gradientStart)),
         ),
@@ -332,11 +329,14 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.gps_fixed, size: 14, color: Colors.green),
+                const Icon(Icons.gps_fixed,
+                    size: 14, color: Colors.green),
                 const SizedBox(width: 6),
                 Text(
-                  'GPS: ${_latitude!.toStringAsFixed(5)}, ${_longitude!.toStringAsFixed(5)}',
-                  style: const TextStyle(fontSize: 12, color: Colors.green),
+                  'GPS: ${_latitude!.toStringAsFixed(5)}, '
+                  '${_longitude!.toStringAsFixed(5)}',
+                  style: const TextStyle(
+                      fontSize: 12, color: Colors.green),
                 ),
               ],
             ),
@@ -355,12 +355,16 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
           child: const Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.info_outline, size: 16, color: Color(0xFF0284C7)),
+              Icon(Icons.info_outline,
+                  size: 16, color: Color(0xFF0284C7)),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Your report will be reviewed by Bacnotan LGU officials. Barangay staff may recategorize your concern if needed for proper routing.',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF0369A1)),
+                  'Your report will be reviewed by Bacnotan LGU officials. '
+                  'Barangay staff may recategorize your concern if needed '
+                  'for proper routing.',
+                  style: TextStyle(
+                      fontSize: 11, color: Color(0xFF0369A1)),
                 ),
               ),
             ],
@@ -388,26 +392,246 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                   )
                 : const Text('Submit Report',
                     style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold)),
           ),
         ),
       ],
     );
   }
 
-  Future<void> _showCameraPrivacyDialog() async {
-    final allowed = await showDialog<bool>(
+  // ---------------------------------------------------------------------------
+  // Evidence helpers
+  // ---------------------------------------------------------------------------
+
+  Widget _evidenceButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: Colors.grey.shade300, style: BorderStyle.solid),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 32, color: gradientStart),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                  color: gradientStart,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _mediaPreview() {
+    final isVideo = _videoFile != null;
+    final file    = isVideo ? _videoFile! : _imageFile!;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: gradientStart.withValues(alpha: 0.5)),
+      ),
+      child: Stack(
+        children: [
+          // Preview
+          ClipRRect(
+            borderRadius: BorderRadius.circular(11),
+            child: isVideo
+                ? Container(
+                    height: 160,
+                    width: double.infinity,
+                    color: Colors.black,
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.videocam,
+                            color: Colors.white, size: 48),
+                        SizedBox(height: 8),
+                        Text('Video selected',
+                            style: TextStyle(
+                                color: Colors.white70, fontSize: 13)),
+                      ],
+                    ),
+                  )
+                : kIsWeb
+                    ? Image.network(
+                        file.path,
+                        height: 160,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    : Image.file(
+                        File(file.path),
+                        height: 160,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+          ),
+
+          // Type badge
+          Positioned(
+            top: 8,
+            left: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: isVideo ? Colors.blue : gradientStart,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isVideo
+                        ? Icons.videocam
+                        : Icons.photo_camera,
+                    color: Colors.white,
+                    size: 12,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    isVideo ? 'Video' : 'Photo',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Remove button
+          Positioned(
+            top: 6,
+            right: 6,
+            child: GestureDetector(
+              onTap: () => setState(() {
+                _imageFile = null;
+                _videoFile = null;
+              }),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close,
+                    color: Colors.white, size: 16),
+              ),
+            ),
+          ),
+
+          // Change button
+          Positioned(
+            bottom: 8,
+            right: 8,
+            child: GestureDetector(
+              onTap: () => setState(() {
+                _imageFile = null;
+                _videoFile = null;
+              }),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'Change',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pickers
+  // ---------------------------------------------------------------------------
+
+  Future<void> _pickPhoto() async {
+    final allowed = await _showMediaConsentDialog(isVideo: false);
+    if (!allowed) return;
+
+    final source = await _showSourceSheet(isVideo: false);
+    if (source == null) return;
+
+    final picked = await _picker.pickImage(
+      source: source,
+      imageQuality: 75,
+      maxWidth: 1280,
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _imageFile = picked;
+        _videoFile = null;
+      });
+    }
+  }
+
+  Future<void> _pickVideo() async {
+    final allowed = await _showMediaConsentDialog(isVideo: true);
+    if (!allowed) return;
+
+    final source = await _showSourceSheet(isVideo: true);
+    if (source == null) return;
+
+    final picked = await _picker.pickVideo(
+      source: source,
+      maxDuration: const Duration(minutes: 3),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _videoFile = picked;
+        _imageFile = null;
+      });
+    }
+  }
+
+  Future<bool> _showMediaConsentDialog({required bool isVideo}) async {
+    final result = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('ðŸ“· Camera Access Notice'),
-        content: const Text(
-          'BEE-Alert will use your camera to capture photo evidence. '
-          'Photos will include timestamp and location data. '
-          'This information will be shared with Bacnotan LGU officials. '
-          'By proceeding, you consent to photo capture.',
-          style: TextStyle(fontSize: 14),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16)),
+        title: Text(isVideo
+            ? '🎥 Video Access Notice'
+            : '📷 Camera Access Notice'),
+        content: Text(
+          isVideo
+              ? 'BEE-Alert will record a video as evidence. '
+                'The video will include timestamp and location data '
+                'and will be shared with Bacnotan LGU officials. '
+                'Maximum duration: 3 minutes. '
+                'By proceeding, you consent to video recording.'
+              : 'BEE-Alert will use your camera to capture photo evidence. '
+                'Photos will include timestamp and location data. '
+                'This information will be shared with Bacnotan LGU officials. '
+                'By proceeding, you consent to photo capture.',
+          style: const TextStyle(fontSize: 14),
         ),
         actions: [
           TextButton(
@@ -419,23 +643,72 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
                 backgroundColor: gradientStart),
-            child: const Text('Allow & Take Photo'),
+            child: Text(isVideo
+                ? 'Allow & Record'
+                : 'Allow & Continue'),
           ),
         ],
       ),
     );
-
-    if (allowed == true) {
-      final picked = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 75,
-        maxWidth: 1280,
-      );
-      if (picked != null) {
-        setState(() => _imageFile = picked);
-      }
-    }
+    return result ?? false;
   }
+
+  Future<ImageSource?> _showSourceSheet({required bool isVideo}) async {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              isVideo ? 'Record or Upload Video' : 'Take or Upload Photo',
+              style: const TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFFFFF3E0),
+                child: Icon(Icons.camera_alt_outlined,
+                    color: gradientStart),
+              ),
+              title: Text(isVideo ? 'Record a Video' : 'Take a Photo'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFFFFF3E0),
+                child: Icon(Icons.photo_library_outlined,
+                    color: gradientStart),
+              ),
+              title: Text(isVideo
+                  ? 'Choose from Gallery'
+                  : 'Choose from Gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // GPS
+  // ---------------------------------------------------------------------------
 
   Future<void> _useGpsLocation() async {
     try {
@@ -447,17 +720,19 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Location permission permanently denied.')),
+              content:
+                  Text('Location permission permanently denied.')),
         );
         return;
       }
       final pos = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
       setState(() {
-        _latitude = pos.latitude;
+        _latitude  = pos.latitude;
         _longitude = pos.longitude;
         _locationController.text =
-            '${pos.latitude.toStringAsFixed(5)}, ${pos.longitude.toStringAsFixed(5)}';
+            '${pos.latitude.toStringAsFixed(5)}, '
+            '${pos.longitude.toStringAsFixed(5)}';
       });
     } catch (e) {
       if (!mounted) return;
@@ -467,10 +742,15 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Submit
+  // ---------------------------------------------------------------------------
+
   Future<void> _submit() async {
     if (_descController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please describe your concern.')),
+        const SnackBar(
+            content: Text('Please describe your concern.')),
       );
       return;
     }
@@ -479,8 +759,8 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
 
     try {
       final user = FirebaseAuth.instance.currentUser!;
-      final ref = _reportService.generateReportReference();
-      final now = DateTime.now();
+      final ref  = _reportService.generateReportReference();
+      final now  = DateTime.now();
 
       final report = ReportModel(
         id: '',
@@ -498,7 +778,11 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
         reportReference: ref,
       );
 
-      await _reportService.submitReport(report, imageFile: _imageFile);
+      await _reportService.submitReport(
+        report,
+        imageFile: _imageFile,
+        videoFile: _videoFile,
+      );
 
       if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(
@@ -519,6 +803,10 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Header helpers
+  // ---------------------------------------------------------------------------
+
   String _stepTitle() {
     switch (_step) {
       case 1:
@@ -529,6 +817,10 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
         return '';
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -552,7 +844,8 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
             ),
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+                padding:
+                    const EdgeInsets.fromLTRB(16, 12, 16, 28),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -564,7 +857,8 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                           Navigator.of(context).pop();
                         }
                       },
-                      icon: const Icon(Icons.arrow_back_ios_new,
+                      icon: const Icon(
+                          Icons.arrow_back_ios_new,
                           color: Colors.white),
                       padding: EdgeInsets.zero,
                     ),
@@ -584,7 +878,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                           color: Colors.white70, fontSize: 13),
                     ),
                     const SizedBox(height: 12),
-                    // Step progress bar
+                    // Progress bar
                     Row(
                       children: [
                         Expanded(
@@ -630,7 +924,8 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
-              child: _step == 1 ? _buildStep1() : _buildStep2(),
+              child:
+                  _step == 1 ? _buildStep1() : _buildStep2(),
             ),
           ),
         ],
