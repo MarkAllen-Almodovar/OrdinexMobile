@@ -1,7 +1,7 @@
-import 'dart:io';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/report_model.dart';
 
 class ReportService {
@@ -11,41 +11,41 @@ class ReportService {
   /// Generate a unique report reference: RPT-{timestamp}-{3-digit random}
   String generateReportReference() {
     final ts = DateTime.now().millisecondsSinceEpoch;
-    final rand = (Random().nextInt(900) + 100).toString(); // 100-999
+    final rand = (Random().nextInt(900) + 100).toString();
     return 'RPT-$ts-$rand';
   }
 
-  /// Upload image to Firebase Storage and return download URL
-  Future<String?> _uploadImage(File imageFile, String reportRef) async {
+  /// Upload image to Firebase Storage using bytes (works on web + native)
+  Future<String?> _uploadImage(XFile imageFile, String reportRef) async {
     try {
       final ref = _storage.ref().child('reports/$reportRef.jpg');
-      final task = await ref.putFile(
-        imageFile,
-        SettableMetadata(contentType: 'image/jpeg'),
-      );
-      return await task.ref.getDownloadURL();
-    } catch (e) {
+      final bytes = await imageFile.readAsBytes();
+      await ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
+      return await ref.getDownloadURL();
+    } catch (_) {
       return null;
     }
   }
 
-  /// Upload video to Firebase Storage and return download URL
-  Future<String?> _uploadVideo(File videoFile, String reportRef) async {
+  /// Upload video to Firebase Storage using bytes (works on web + native)
+  Future<String?> _uploadVideo(XFile videoFile, String reportRef) async {
     try {
-      final ref = _storage.ref().child('reports/${reportRef}_video.mp4');
-      final task = await ref.putFile(
-        videoFile,
-        SettableMetadata(contentType: 'video/mp4'),
-      );
-      return await task.ref.getDownloadURL();
-    } catch (e) {
+      final ref =
+          _storage.ref().child('reports/${reportRef}_video.mp4');
+      final bytes = await videoFile.readAsBytes();
+      await ref.putData(bytes, SettableMetadata(contentType: 'video/mp4'));
+      return await ref.getDownloadURL();
+    } catch (_) {
       return null;
     }
   }
 
   /// Submit a report — uploads image or video if present, then saves to Firestore
-  Future<String> submitReport(ReportModel report,
-      {File? imageFile, File? videoFile}) async {
+  Future<String> submitReport(
+    ReportModel report, {
+    XFile? imageFile,
+    XFile? videoFile,
+  }) async {
     String? imageUrl;
     String? videoUrl;
 

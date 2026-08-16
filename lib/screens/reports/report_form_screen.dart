@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,7 +9,6 @@ import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/report_service.dart';
 import '../../utils/constants.dart';
-
 class ReportFormScreen extends StatefulWidget {
   const ReportFormScreen({super.key});
 
@@ -22,9 +21,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
   String? _selectedCategory;
   final _descController = TextEditingController();
   final _locationController = TextEditingController();
-  File? _imageFile;
-  XFile? _videoFile;           // video selected by user
-  bool _mediaIsVideo = false;  // whether current media is video
+  XFile? _imageFile;
   double? _latitude;
   double? _longitude;
   bool _submitting = false;
@@ -55,7 +52,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
     super.dispose();
   }
 
-  // ── Step 1: category selection ──────────────────────────────────────────
+  // â”€â”€ Step 1: category selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   Widget _buildStep1() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -138,7 +135,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
     }
   }
 
-  // ── Step 2: Report details ───────────────────────────────────────────────
+  // â”€â”€ Step 2: Report details â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   Widget _buildStep2() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,7 +151,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
           child: const Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('⚠️', style: TextStyle(fontSize: 18)),
+              Text('âš ï¸', style: TextStyle(fontSize: 18)),
               SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -230,12 +227,12 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
         ),
         const SizedBox(height: 16),
 
-        // Photo / Video Evidence
-        const Text('Evidence (Optional)',
+        // Photo Evidence
+        const Text('Photo Evidence (Optional)',
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         GestureDetector(
-          onTap: _showMediaPrivacyDialog,
+          onTap: _showCameraPrivacyDialog,
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -246,13 +243,13 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                   color: Colors.grey.shade300,
                   style: BorderStyle.solid),
             ),
-            child: _imageFile == null && _videoFile == null
+            child: _imageFile == null
                 ? const Column(
                     children: [
                       Icon(Icons.camera_alt_outlined,
                           size: 32, color: Colors.grey),
                       SizedBox(height: 6),
-                      Text('Take Photo or Record Video',
+                      Text('Take Photo with Camera',
                           style: TextStyle(
                               color: Colors.grey,
                               fontWeight: FontWeight.w500)),
@@ -264,64 +261,18 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                   )
                 : Stack(
                     children: [
-                      // Preview
-                      if (!_mediaIsVideo && _imageFile != null)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: kIsWeb
-                              ? Image.network(
-                                  _imageFile!.path,
-                                  height: 160,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                )
-                              : Image.file(
-                                  _imageFile!,
-                                  height: 160,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                ),
-                        ),
-                      if (_mediaIsVideo && _videoFile != null)
-                        Container(
-                          height: 160,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.black87,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.videocam,
-                                  color: Colors.white, size: 40),
-                              const SizedBox(height: 8),
-                              Text(
-                                _videoFile!.name,
-                                style: const TextStyle(
-                                    color: Colors.white70, fontSize: 12),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              const Text('Video recorded ✓',
-                                  style: TextStyle(
-                                      color: Colors.greenAccent,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                        ),
-                      // Remove button
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: kIsWeb ? Image.network(_imageFile!.path, fit: BoxFit.cover, height: 160, width: double.infinity,) : Image.file(File(_imageFile!.path),
+                            height: 160,
+                            width: double.infinity,
+                            fit: BoxFit.cover),
+                      ),
                       Positioned(
                         top: 6,
                         right: 6,
                         child: GestureDetector(
-                          onTap: () => setState(() {
-                            _imageFile = null;
-                            _videoFile = null;
-                            _mediaIsVideo = false;
-                          }),
+                          onTap: () => setState(() => _imageFile = null),
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: const BoxDecoration(
@@ -367,7 +318,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
         const SizedBox(height: 8),
         TextButton.icon(
           onPressed: _useGpsLocation,
-          icon: const Text('📍', style: TextStyle(fontSize: 16)),
+          icon: const Text('ðŸ“', style: TextStyle(fontSize: 16)),
           label: const Text('Use my current GPS location',
               style: TextStyle(color: gradientStart)),
         ),
@@ -444,18 +395,18 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
     );
   }
 
-  Future<void> _showMediaPrivacyDialog() async {
+  Future<void> _showCameraPrivacyDialog() async {
     final allowed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('📷 Camera Access Notice'),
+        title: const Text('ðŸ“· Camera Access Notice'),
         content: const Text(
-          'BEE-Alert will use your camera to capture photo or video evidence. '
-          'Media will include timestamp and location data. '
+          'BEE-Alert will use your camera to capture photo evidence. '
+          'Photos will include timestamp and location data. '
           'This information will be shared with Bacnotan LGU officials. '
-          'By proceeding, you consent to media capture.',
+          'By proceeding, you consent to photo capture.',
           style: TextStyle(fontSize: 14),
         ),
         actions: [
@@ -468,152 +419,20 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
                 backgroundColor: gradientStart),
-            child: const Text('Allow & Continue'),
+            child: const Text('Allow & Take Photo'),
           ),
         ],
       ),
     );
 
-    if (allowed != true) return;
-
-    // Show photo vs video picker
-    if (!mounted) return;
-    final mediaType = await showModalBottomSheet<String>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40, height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              ListTile(
-                leading: Container(
-                  width: 44, height: 44,
-                  decoration: BoxDecoration(
-                    color: gradientStart.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.camera_alt_outlined,
-                      color: gradientStart),
-                ),
-                title: const Text('Take Photo',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Capture a photo as evidence'),
-                onTap: () => Navigator.pop(context, 'photo'),
-              ),
-              ListTile(
-                leading: Container(
-                  width: 44, height: 44,
-                  decoration: BoxDecoration(
-                    color: gradientStart.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.videocam_outlined,
-                      color: gradientStart),
-                ),
-                title: const Text('Record Video',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Record a short video as evidence'),
-                onTap: () => Navigator.pop(context, 'video'),
-              ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
-              ListTile(
-                leading: Container(
-                  width: 44, height: 44,
-                  decoration: BoxDecoration(
-                    color: Colors.purple.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.photo_library_outlined,
-                      color: Colors.purple),
-                ),
-                title: const Text('Upload Photo from Gallery',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Choose an existing photo'),
-                onTap: () => Navigator.pop(context, 'gallery_photo'),
-              ),
-              ListTile(
-                leading: Container(
-                  width: 44, height: 44,
-                  decoration: BoxDecoration(
-                    color: Colors.purple.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.video_library_outlined,
-                      color: Colors.purple),
-                ),
-                title: const Text('Upload Video from Gallery',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Choose an existing video'),
-                onTap: () => Navigator.pop(context, 'gallery_video'),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (mediaType == 'photo') {
+    if (allowed == true) {
       final picked = await _picker.pickImage(
         source: ImageSource.camera,
         imageQuality: 75,
         maxWidth: 1280,
       );
-      if (picked != null && mounted) {
-        setState(() {
-          _imageFile = File(picked.path);
-          _videoFile = null;
-          _mediaIsVideo = false;
-        });
-      }
-    } else if (mediaType == 'video') {
-      final picked = await _picker.pickVideo(
-        source: ImageSource.camera,
-        maxDuration: const Duration(minutes: 2),
-      );
-      if (picked != null && mounted) {
-        setState(() {
-          _videoFile = picked;
-          _imageFile = null;
-          _mediaIsVideo = true;
-        });
-      }
-    } else if (mediaType == 'gallery_photo') {
-      final picked = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 75,
-        maxWidth: 1280,
-      );
-      if (picked != null && mounted) {
-        setState(() {
-          _imageFile = File(picked.path);
-          _videoFile = null;
-          _mediaIsVideo = false;
-        });
-      }
-    } else if (mediaType == 'gallery_video') {
-      final picked = await _picker.pickVideo(
-        source: ImageSource.gallery,
-        maxDuration: const Duration(minutes: 5),
-      );
-      if (picked != null && mounted) {
-        setState(() {
-          _videoFile = picked;
-          _imageFile = null;
-          _mediaIsVideo = true;
-        });
+      if (picked != null) {
+        setState(() => _imageFile = picked);
       }
     }
   }
@@ -679,11 +498,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
         reportReference: ref,
       );
 
-      await _reportService.submitReport(report,
-          imageFile: _mediaIsVideo ? null : _imageFile,
-          videoFile: _mediaIsVideo && _videoFile != null
-              ? File(_videoFile!.path)
-              : null);
+      await _reportService.submitReport(report, imageFile: _imageFile);
 
       if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(
