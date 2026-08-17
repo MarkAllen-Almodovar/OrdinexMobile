@@ -556,7 +556,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
               _fieldLabel('Barangay'),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
-                value: _selectedBarangay,
+                initialValue: _selectedBarangay,
                 hint: const Text('Select barangay',
                     style: TextStyle(
                         color: Color(0xFF9CA3AF), fontSize: 14)),

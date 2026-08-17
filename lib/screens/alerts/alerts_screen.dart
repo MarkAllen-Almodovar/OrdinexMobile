@@ -111,14 +111,14 @@ class AlertsScreen extends StatelessWidget {
                               color: Colors.red.shade400, fontSize: 12),
                         ),
                         const SizedBox(height: 10),
-                        Row(
+                        const Row(
                           children: [
-                            _HotlineButton(
+                            const _HotlineButton(
                               label: '911',
                               tel: 'tel:911',
                             ),
-                            const SizedBox(width: 10),
-                            _HotlineButton(
+                            SizedBox(width: 10),
+                            const _HotlineButton(
                               label: '0917-123-4567',
                               tel: 'tel:09171234567',
                             ),
@@ -378,8 +378,8 @@ class _AnnouncementCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border(
-          left: BorderSide(color: colorOngoing, width: 4),
+        border: const Border(
+          left: const BorderSide(color: colorOngoing, width: 4),
         ),
         boxShadow: [
           BoxShadow(
