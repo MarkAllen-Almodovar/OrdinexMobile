@@ -757,7 +757,7 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
         const SizedBox(height: 4),
         const Text(
-          'Required  â€¢  Camera or Gallery  â€¢  JPG, PNG',
+          'Required  •  Camera or Gallery  •  JPG, PNG',
           style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
         ),
       ],
