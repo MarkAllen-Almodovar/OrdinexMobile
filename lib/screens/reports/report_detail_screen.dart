@@ -3,6 +3,7 @@ import '../../models/report_model.dart';
 import '../../services/report_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/status_badge.dart';
+import 'report_update_screen.dart';
 
 class ReportDetailScreen extends StatefulWidget {
   final ReportModel report;
@@ -539,6 +540,39 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   ],
 
                   const SizedBox(height: 24),
+
+                  // ── See Update button ──────────────────────
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              ReportUpdateScreen(report: r),
+                        ),
+                      ),
+                      icon: const Icon(Icons.timeline_outlined,
+                          size: 20),
+                      label: const Text(
+                        'See Update',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: gradientStart,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
 
                   // ── Cancel Report button ───────────────────
                   if (_canCancel)
