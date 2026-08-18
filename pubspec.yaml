@@ -19,6 +19,8 @@ dependencies:
   # Media & Location
   image_picker: ^1.2.3
   geolocator: ^10.1.1
+  video_player: ^2.9.2
+  chewie: ^1.8.5
 
   # Utilities
   intl: ^0.18.1

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
+import 'package:chewie/chewie.dart';
 import '../../models/report_model.dart';
 import '../../services/report_service.dart';
 import '../../utils/constants.dart';
@@ -406,39 +408,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                                 color: Color(0xFF6B7280)),
                           ),
                           const SizedBox(height: 8),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: Colors.black87,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.videocam,
-                                    color: Colors.white, size: 28),
-                                const SizedBox(width: 12),
-                                const Expanded(
-                                  child: Text(
-                                    'Video evidence attached',
-                                    style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 13),
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    // Video playback would require
-                                    // video_player package — for now
-                                    // open URL via url_launcher
-                                  },
-                                  child: const Text('View',
-                                      style: TextStyle(
-                                          color: gradientStart)),
-                                ),
-                              ],
-                            ),
-                          ),
+                          _VideoPlayer(url: r.videoUrl!),
                         ],
                       ],
                     ),
@@ -653,6 +623,111 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           const SizedBox(height: 12),
           ...children,
         ],
+      ),
+    );
+  }
+}
+
+// ── Inline video player ──────────────────────────────────────────────────────
+
+class _VideoPlayer extends StatefulWidget {
+  final String url;
+  const _VideoPlayer({required this.url});
+
+  @override
+  State<_VideoPlayer> createState() => _VideoPlayerState();
+}
+
+class _VideoPlayerState extends State<_VideoPlayer> {
+  late VideoPlayerController _videoController;
+  ChewieController? _chewieController;
+  bool _initialized = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _initPlayer();
+  }
+
+  Future<void> _initPlayer() async {
+    try {
+      _videoController = VideoPlayerController.networkUrl(
+        Uri.parse(widget.url),
+      );
+      await _videoController.initialize();
+      _chewieController = ChewieController(
+        videoPlayerController: _videoController,
+        autoPlay: false,
+        looping: false,
+        aspectRatio: _videoController.value.aspectRatio,
+        placeholder: Container(color: Colors.black),
+        materialProgressColors: ChewieProgressColors(
+          playedColor: gradientStart,
+          handleColor: gradientStart,
+          bufferedColor: gradientStart.withValues(alpha: 0.3),
+          backgroundColor: Colors.grey.shade800,
+        ),
+        errorBuilder: (_, msg) => Center(
+          child: Text(msg,
+              style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        ),
+      );
+      if (mounted) setState(() => _initialized = true);
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Could not load video.');
+    }
+  }
+
+  @override
+  void dispose() {
+    _videoController.dispose();
+    _chewieController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_error != null) {
+      return Container(
+        height: 100,
+        decoration: BoxDecoration(
+          color: Colors.black87,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white54, size: 28),
+              const SizedBox(height: 6),
+              Text(_error!,
+                  style: const TextStyle(
+                      color: Colors.white54, fontSize: 12)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (!_initialized) {
+      return Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: Colors.black87,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(color: gradientStart),
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: AspectRatio(
+        aspectRatio: _videoController.value.aspectRatio,
+        child: Chewie(controller: _chewieController!),
       ),
     );
   }
