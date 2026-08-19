@@ -85,4 +85,15 @@ class ReportService {
   Future<void> deleteReport(String reportId) async {
     await _db.collection('reports').doc(reportId).delete();
   }
+
+  /// Real-time stream of status history for a report, newest first.
+  Stream<List<Map<String, dynamic>>> getStatusHistory(String reportId) {
+    return _db
+        .collection('reports')
+        .doc(reportId)
+        .collection('statusHistory')
+        .orderBy('updatedAt', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => d.data()).toList());
+  }
 }

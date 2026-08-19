@@ -1,45 +1,96 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/report_model.dart';
+import '../../services/report_service.dart';
 import '../../utils/constants.dart';
+import '../../widgets/status_badge.dart';
 
 class ReportUpdateScreen extends StatelessWidget {
   final ReportModel report;
 
   const ReportUpdateScreen({super.key, required this.report});
 
-  // Map status to step index: 0 = submitted, 1 = in progress, 2 = resolved
-  int get _currentStep {
-    switch (report.status) {
-      case statusOngoing:
-        return 1;
-      case statusCompleted:
-        return 2;
-      case 'Cancelled':
-        return -1; // special case
-      default:
-        return 0; // Pending
-    }
-  }
-
-  String _formatDate(DateTime dt) {
+  String _formatDate(dynamic ts) {
+    if (ts == null) return '—';
+    final dt = ts is Timestamp ? ts.toDate() : ts as DateTime;
     const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ];
     final h = dt.hour.toString().padLeft(2, '0');
     final m = dt.minute.toString().padLeft(2, '0');
-    return '${months[dt.month - 1]} ${dt.day}, $h:$m AM';
+    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}  $h:$m';
+  }
+
+  IconData _statusIcon(String status) {
+    switch (status) {
+      case 'Pending':
+        return Icons.hourglass_empty_rounded;
+      case 'Ongoing':
+        return Icons.engineering_rounded;
+      case 'Completed':
+        return Icons.task_alt_rounded;
+      case 'Cancelled':
+        return Icons.cancel_rounded;
+      default:
+        return Icons.circle_outlined;
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'Pending':
+        return colorPending;
+      case 'Ongoing':
+        return colorOngoing;
+      case 'Completed':
+        return colorCompleted;
+      case 'Cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _statusTitle(String status) {
+    switch (status) {
+      case 'Pending':
+        return 'Awaiting Review';
+      case 'Ongoing':
+        return 'Action in Progress';
+      case 'Completed':
+        return 'Issue Resolved';
+      case 'Cancelled':
+        return 'Report Cancelled';
+      default:
+        return status;
+    }
+  }
+
+  String _statusSubtitle(String status) {
+    switch (status) {
+      case 'Pending':
+        return 'Your report is in the queue for review.';
+      case 'Ongoing':
+        return 'Municipal staff are actively working on this concern.';
+      case 'Completed':
+        return 'The issue has been addressed and resolved.';
+      case 'Cancelled':
+        return 'This report was marked as cancelled.';
+      default:
+        return 'Status updated by the municipal office.';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final steps = _buildSteps();
+    final reportService = ReportService();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF5F5F5),
       body: Column(
         children: [
-          // ── Orange header ──────────────────────────────────────
+          // Header
           Container(
             width: double.infinity,
             decoration: const BoxDecoration(
@@ -48,24 +99,55 @@ class ReportUpdateScreen extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(28),
+                bottomRight: Radius.circular(28),
+              ),
             ),
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(4, 8, 16, 20),
-                child: Row(
+                padding: const EdgeInsets.fromLTRB(4, 8, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.arrow_back,
-                          color: Colors.white, size: 24),
+                      icon: const Icon(Icons.arrow_back_ios_new,
+                          color: Colors.white),
                     ),
-                    const Text(
-                      'Report Update',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(height: 4),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Report Update',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            report.reportReference,
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 12),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              const Text(
+                                'Current status: ',
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 13),
+                              ),
+                              StatusBadge(status: report.status),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -74,249 +156,423 @@ class ReportUpdateScreen extends StatelessWidget {
             ),
           ),
 
-          // ── Timeline body ──────────────────────────────────────
+          // Body
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Repair Status',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1F2937),
-                    ),
-                  ),
-                  const SizedBox(height: 28),
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: reportService.getStatusHistory(report.id),
+              builder: (context, snap) {
+                final historyItems = snap.data ?? [];
+                final bool loading =
+                    snap.connectionState == ConnectionState.waiting &&
+                        historyItems.isEmpty;
 
-                  // Timeline
-                  ...List.generate(steps.length, (i) {
-                    return _TimelineStep(
-                      step: steps[i],
-                      isLast: i == steps.length - 1,
-                    );
-                  }),
-                ],
-              ),
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Status History',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1F2937),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Track every status change made by the municipal office.',
+                        style: TextStyle(
+                            fontSize: 12, color: Color(0xFF6B7280)),
+                      ),
+                      const SizedBox(height: 24),
+
+                      if (loading)
+                        const Center(
+                          child: CircularProgressIndicator(
+                              color: gradientStart),
+                        )
+                      else if (historyItems.isEmpty)
+                        _TimelineItem(
+                          icon: Icons.send_rounded,
+                          title: 'Report Submitted',
+                          subtitle:
+                              'Your concern was recorded in the system.',
+                          date: _formatDate(
+                              Timestamp.fromDate(report.submittedAt)),
+                          statusColor: gradientStart,
+                          isLast: true,
+                          isFirst: true,
+                        )
+                      else ...[
+                        ...List.generate(historyItems.length, (i) {
+                          final item     = historyItems[i];
+                          final status   = item['status'] as String? ?? '—';
+                          final date     = item['updatedAt'];
+                          final evidence = item['evidenceUrl'] as String?;
+                          final evType   = item['evidenceType'] as String?;
+
+                          return _TimelineItem(
+                            icon: _statusIcon(status),
+                            title: _statusTitle(status),
+                            subtitle: _statusSubtitle(status),
+                            date: _formatDate(date),
+                            statusColor: _statusColor(status),
+                            isLast: false,
+                            isFirst: i == 0,
+                            evidenceUrl: evidence,
+                            evidenceType: evType,
+                          );
+                        }),
+
+                        // Submitted step always at the bottom
+                        _TimelineItem(
+                          icon: Icons.send_rounded,
+                          title: 'Report Submitted',
+                          subtitle:
+                              'Your concern was recorded in the system.',
+                          date: _formatDate(
+                              Timestamp.fromDate(report.submittedAt)),
+                          statusColor: gradientStart,
+                          isLast: true,
+                          isFirst: false,
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
             ),
           ),
-
         ],
       ),
     );
   }
-
-  List<_StepData> _buildSteps() {
-    final step = _currentStep;
-    final isCancelled = report.status == 'Cancelled';
-
-    if (isCancelled) {
-      return [
-        _StepData(
-          icon: Icons.check,
-          title: 'Report Submitted',
-          subtitle: 'System recorded incident through citizen portal.',
-          date: _formatDate(report.submittedAt),
-          state: _StepState.done,
-        ),
-        _StepData(
-          icon: Icons.cancel_outlined,
-          title: 'Report Cancelled',
-          subtitle: report.cancellationReason?.isNotEmpty == true
-              ? report.cancellationReason!
-              : 'Report was cancelled.',
-          date: _formatDate(report.updatedAt),
-          state: _StepState.cancelled,
-        ),
-      ];
-    }
-
-    return [
-      _StepData(
-        icon: Icons.check,
-        title: 'Report Submitted',
-        subtitle: 'System recorded incident through citizen portal.',
-        date: _formatDate(report.submittedAt),
-        state: step >= 0 ? _StepState.done : _StepState.pending,
-      ),
-      _StepData(
-        icon: Icons.engineering,
-        title: 'Work in Progress',
-        subtitle: step >= 1
-            ? (report.lastUpdate?.isNotEmpty == true
-                ? report.lastUpdate!
-                : 'Your report is being reviewed and actioned.')
-            : 'Awaiting assignment to municipal team.',
-        date: step >= 1 ? _formatDate(report.updatedAt) : null,
-        state: step == 1
-            ? _StepState.active
-            : step > 1
-                ? _StepState.done
-                : _StepState.pending,
-      ),
-      _StepData(
-        icon: Icons.task_alt,
-        title: 'Resolved',
-        subtitle: step >= 2
-            ? 'Issue has been resolved. Final cleanup and photo verification.'
-            : 'Final cleanup and photo verification.',
-        date: step >= 2 ? _formatDate(report.updatedAt) : null,
-        state: step >= 2 ? _StepState.done : _StepState.pending,
-      ),
-    ];
-  }
 }
 
-// ── Data classes ─────────────────────────────────────────────────────────────
+// ── Timeline item widget ─────────────────────────────────────────────────────
 
-enum _StepState { done, active, pending, cancelled }
-
-class _StepData {
+class _TimelineItem extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final String? date;
-  final _StepState state;
+  final String date;
+  final Color statusColor;
+  final bool isLast;
+  final bool isFirst;
+  final String? evidenceUrl;
+  final String? evidenceType;
 
-  const _StepData({
+  const _TimelineItem({
     required this.icon,
     required this.title,
     required this.subtitle,
-    this.date,
-    required this.state,
+    required this.date,
+    required this.statusColor,
+    required this.isLast,
+    required this.isFirst,
+    this.evidenceUrl,
+    this.evidenceType,
   });
-}
-
-// ── Timeline step widget ─────────────────────────────────────────────────────
-
-class _TimelineStep extends StatelessWidget {
-  final _StepData step;
-  final bool isLast;
-
-  const _TimelineStep({required this.step, required this.isLast});
-
-  Color get _circleColor {
-    switch (step.state) {
-      case _StepState.done:
-        return gradientStart;
-      case _StepState.active:
-        return gradientStart;
-      case _StepState.cancelled:
-        return Colors.red;
-      case _StepState.pending:
-        return const Color(0xFFD1D5DB);
-    }
-  }
-
-  Color get _lineColor {
-    switch (step.state) {
-      case _StepState.done:
-      case _StepState.active:
-        return gradientStart;
-      default:
-        return const Color(0xFFE5E7EB);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    final isPending = step.state == _StepState.pending;
+    final hasEvidence = evidenceUrl != null && evidenceUrl!.isNotEmpty;
+    final isVideo = evidenceType == 'video';
 
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Left: circle + vertical line ──────────────────
+          // Left: circle + line
           SizedBox(
-            width: 40,
+            width: 44,
             child: Column(
               children: [
-                // Circle icon
                 Container(
-                  width: 36,
-                  height: 36,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
-                    color: _circleColor,
+                    color: statusColor,
                     shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: statusColor.withValues(alpha: 0.35),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
-                  child: Icon(
-                    step.icon,
-                    color: isPending
-                        ? const Color(0xFF9CA3AF)
-                        : Colors.white,
-                    size: 18,
-                  ),
+                  child: Icon(icon, color: Colors.white, size: 20),
                 ),
-                // Vertical line
                 if (!isLast)
                   Expanded(
                     child: Container(
                       width: 2,
                       margin: const EdgeInsets.symmetric(vertical: 4),
-                      color: _lineColor,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            statusColor.withValues(alpha: 0.6),
+                            const Color(0xFFE5E7EB),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
                     ),
                   ),
               ],
             ),
           ),
 
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
 
-          // ── Right: text ───────────────────────────────────
+          // Right: card
           Expanded(
             child: Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title + date on same row
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          step.title,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: isPending
-                                ? const Color(0xFF9CA3AF)
-                                : step.state == _StepState.cancelled
-                                    ? Colors.red
-                                    : const Color(0xFF1F2937),
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: isFirst
+                      ? Border.all(
+                          color: statusColor.withValues(alpha: 0.4),
+                          width: 1.5)
+                      : null,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title + Latest badge
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: isFirst
+                                  ? statusColor
+                                  : const Color(0xFF1F2937),
+                            ),
                           ),
                         ),
-                      ),
-                      if (step.date != null) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          step.date!,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF9CA3AF),
+                        if (isFirst)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Latest',
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: statusColor),
+                            ),
                           ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF6B7280),
+                          height: 1.5),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time_rounded,
+                            size: 12, color: Color(0xFF9CA3AF)),
+                        const SizedBox(width: 4),
+                        Text(
+                          date,
+                          style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF9CA3AF)),
                         ),
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    step.subtitle,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isPending
-                          ? const Color(0xFFD1D5DB)
-                          : const Color(0xFF6B7280),
-                      height: 1.5,
                     ),
-                  ),
-                ],
+
+                    // ── Evidence (only for Completed entries) ───
+                    if (hasEvidence) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: const Color(0xFFBBF7D0)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  isVideo
+                                      ? Icons.videocam_rounded
+                                      : Icons.photo_camera_rounded,
+                                  size: 14,
+                                  color: colorCompleted,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  isVideo
+                                      ? 'Video Evidence'
+                                      : 'Photo Evidence',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: colorCompleted,
+                                  ),
+                                ),
+                                const Spacer(),
+                                const Text(
+                                  'Uploaded by admin',
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color: Color(0xFF9CA3AF)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            if (!isVideo)
+                              GestureDetector(
+                                onTap: () => _showImageFullscreen(
+                                    context, evidenceUrl!),
+                                child: ClipRRect(
+                                  borderRadius:
+                                      BorderRadius.circular(8),
+                                  child: Image.network(
+                                    evidenceUrl!,
+                                    width: double.infinity,
+                                    height: 180,
+                                    fit: BoxFit.cover,
+                                    loadingBuilder: (_, child, prog) =>
+                                        prog == null
+                                            ? child
+                                            : Container(
+                                                height: 180,
+                                                color: Colors.grey
+                                                    .shade100,
+                                                child: const Center(
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                          color:
+                                                              gradientStart),
+                                                ),
+                                              ),
+                                    errorBuilder: (_, __, ___) =>
+                                        Container(
+                                      height: 60,
+                                      color: Colors.grey.shade100,
+                                      child: const Center(
+                                        child: Text(
+                                            'Could not load image',
+                                            style: TextStyle(
+                                                color: Colors.grey,
+                                                fontSize: 11)),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.black87,
+                                  borderRadius:
+                                      BorderRadius.circular(8),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.videocam,
+                                        color: Colors.white70, size: 22),
+                                    SizedBox(width: 10),
+                                    Text(
+                                      'Video evidence attached',
+                                      style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            const SizedBox(height: 6),
+                            Text(
+                              isVideo
+                                  ? 'Video evidence provided by the municipal office.'
+                                  : 'Tap the image to view full size.',
+                              style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Color(0xFF9CA3AF),
+                                  fontStyle: FontStyle.italic),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showImageFullscreen(BuildContext context, String url) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                child: Image.network(url, fit: BoxFit.contain),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close,
+                      color: Colors.white, size: 20),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

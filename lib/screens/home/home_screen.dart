@@ -11,6 +11,7 @@ import '../../widgets/bottom_nav_bar.dart';
 import '../../widgets/report_card.dart';
 import '../../widgets/bee_fab.dart';
 import '../reports/my_reports_screen.dart';
+import '../reports/report_detail_screen.dart';
 import '../alerts/alerts_screen.dart';
 import '../profile/profile_screen.dart';
 
@@ -29,6 +30,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   UserModel? _userProfile;
   bool _profileLoading = true;
+
+  final List<Widget> _tabs = const [];
 
   @override
   void initState() {
@@ -274,7 +277,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                        color: gradientStart.withValues(alpha: 0.1),
+                                color: gradientStart.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Icon(Icons.business_outlined,
@@ -374,7 +377,16 @@ class _HomeScreenState extends State<HomeScreen> {
             }
             return SliverList(
               delegate: SliverChildBuilderDelegate(
-                (ctx, i) => ReportCard(report: reports[i]),
+                (ctx, i) => ReportCard(
+                  report: reports[i],
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ReportDetailScreen(
+                        report: reports[i],
+                      ),
+                    ),
+                  ),
+                ),
                 childCount: reports.length,
               ),
             );
