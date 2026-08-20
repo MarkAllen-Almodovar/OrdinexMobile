@@ -26,6 +26,8 @@ class ReportUpdateScreen extends StatelessWidget {
     switch (status) {
       case 'Pending':
         return Icons.hourglass_empty_rounded;
+      case 'Under Review':
+        return Icons.manage_search_rounded;
       case 'Ongoing':
         return Icons.engineering_rounded;
       case 'Completed':
@@ -41,6 +43,8 @@ class ReportUpdateScreen extends StatelessWidget {
     switch (status) {
       case 'Pending':
         return colorPending;
+      case 'Under Review':
+        return const Color(0xFF8B5CF6); // purple
       case 'Ongoing':
         return colorOngoing;
       case 'Completed':
@@ -56,6 +60,8 @@ class ReportUpdateScreen extends StatelessWidget {
     switch (status) {
       case 'Pending':
         return 'Awaiting Review';
+      case 'Under Review':
+        return 'Under Review';
       case 'Ongoing':
         return 'Action in Progress';
       case 'Completed':
@@ -71,6 +77,8 @@ class ReportUpdateScreen extends StatelessWidget {
     switch (status) {
       case 'Pending':
         return 'Your report is in the queue for review.';
+      case 'Under Review':
+        return 'Municipal staff are reviewing your report.';
       case 'Ongoing':
         return 'Municipal staff are actively working on this concern.';
       case 'Completed':

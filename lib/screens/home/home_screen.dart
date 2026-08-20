@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/report_model.dart';
 import '../../models/user_model.dart';
@@ -31,12 +32,45 @@ class _HomeScreenState extends State<HomeScreen> {
   UserModel? _userProfile;
   bool _profileLoading = true;
 
+  /// Live contacts from Firestore — falls back to hardcoded constants
+  List<MunicipalContact> _contacts = municipalContacts;
+
   final List<Widget> _tabs = const [];
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
+    _loadContacts();
+  }
+
+  Future<void> _loadContacts() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('settings')
+          .doc('contacts')
+          .get();
+      if (!mounted) return;
+      if (snap.exists) {
+        final raw = snap.data()?['contacts'];
+        if (raw is List && raw.isNotEmpty) {
+          final loaded = raw
+              .whereType<Map<String, dynamic>>()
+              .map((m) => MunicipalContact(
+                    name:  m['name']  as String? ?? '',
+                    phone: m['phone'] as String? ?? '',
+                    email: m['email'] as String? ?? '',
+                  ))
+              .where((c) => c.name.isNotEmpty || c.phone.isNotEmpty)
+              .toList();
+          if (loaded.isNotEmpty) {
+            setState(() => _contacts = loaded);
+          }
+        }
+      }
+    } catch (_) {
+      // Firestore unavailable — keep hardcoded fallback silently
+    }
   }
 
   Future<void> _loadProfile() async {
@@ -267,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   child: Column(
-                    children: municipalContacts.asMap().entries.map((e) {
+                    children: _contacts.asMap().entries.map((e) {
                       final i = e.key;
                       final c = e.value;
                       return Column(
@@ -302,7 +336,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               },
                             ),
                           ),
-                          if (i < municipalContacts.length - 1)
+                          if (i < _contacts.length - 1)
                             const Divider(height: 1, indent: 56),
                         ],
                       );
